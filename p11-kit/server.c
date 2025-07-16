@@ -316,7 +316,7 @@ create_unix_socket (const char *address,
         fflush(stderr);
 
 
-	return_val_if_fail (strlen (address) < sizeof (sa.sun_path) - 1, -1);
+	return_val_if_fail (strlen (address) < sizeof (sa.sun_path) - 1, -29);
 	strncpy (sa.sun_path, address, sizeof (sa.sun_path));
 	socket_file = sa.sun_path;
 
@@ -325,7 +325,7 @@ create_unix_socket (const char *address,
 	sd = socket (AF_UNIX, SOCK_STREAM, 0);
 	if (sd == -1) {
 		p11_message_err (errno, _("could not create socket %s"), socket_file);
-		return -1;
+		return -30;
 	}
 
 	socket_mask = S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
@@ -336,14 +336,14 @@ create_unix_socket (const char *address,
 	if (rc == -1) {
 		close (sd);
 		p11_message_err (errno, _("could not bind socket %s"), socket_file);
-		return -1;
+		return -31;
 	}
 
 	rc = listen (sd, 1024);
 	if (rc == -1) {
 		close (sd);
 		p11_message_err (errno, _("could not listen to socket %s"), socket_file);
-		return 1;
+		return -32;
 	}
 
 	if (uid != -1 || gid != -1) {
@@ -351,7 +351,7 @@ create_unix_socket (const char *address,
 		if (rc == -1) {
 			close (sd);
 			p11_message_err (errno, _("could not chown socket %s"), socket_file);
-			return -1;
+			return -33;
 		}
 	}
 
@@ -374,21 +374,21 @@ create_vsock_socket (unsigned int cid,
 	sd = socket (AF_VSOCK, SOCK_STREAM, 0);
 	if (sd == -1) {
 		p11_message_err (errno, _("could not create socket %u:%u"), cid, port);
-		return -1;
+		return -34;
 	}
 
 	rc = bind (sd, (struct sockaddr *)&sa, sizeof(sa));
 	if (rc == -1) {
 		close (sd);
 		p11_message_err (errno, _("could not bind socket %u:%u"), cid, port);
-		return -1;
+		return -35;
 	}
 
 	rc = listen (sd, 1024);
 	if (rc == -1) {
 		close (sd);
 		p11_message_err (errno, _("could not listen to socket %u:%u"), cid, port);
-		return 1;
+		return -36;
 	}
 
 	return sd;
@@ -534,8 +534,8 @@ server_loop (Server *server,
 		server->socket = create_vsock_socket (server->vsock_cid, server->vsock_port);
 #endif
 	}
-	if (server->socket == -1)
-		return 6;
+	if (server->socket < 0)
+		return -(server->socket);
 
 	sigprocmask (SIG_BLOCK, &blockset, NULL);
 
