@@ -310,6 +310,12 @@ create_unix_socket (const char *address,
 	memset (&sa, 0, sizeof(sa));
 	sa.sun_family = AF_UNIX;
 
+        fprintf(stdout, "address is: %s %d\n", address, sizeof(sa.sun_path));
+        fprintf(stderr, "address is: %s %d\n", address, sizeof(sa.sun_path));
+       fflush(stdout);
+        fflush(stderr);
+
+
 	return_val_if_fail (strlen (address) < sizeof (sa.sun_path) - 1, -1);
 	strncpy (sa.sun_path, address, sizeof (sa.sun_path));
 	socket_file = sa.sun_path;
