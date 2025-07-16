@@ -501,7 +501,7 @@ server_loop (Server *server,
 		pid = fork ();
 		if (pid == -1) {
 			p11_message_err (errno, _("could not fork() to daemonize"));
-			return 1;
+			return 2;
 		}
 		if (pid == 0) {
 			close (STDIN_FILENO);
@@ -509,12 +509,12 @@ server_loop (Server *server,
 		}
 		if (pid != 0) {
 			if (!print_environment (pid, server, csh_opt))
-				return 1;
+				return 3;
 			exit (0);
 		}
 		if (setsid () == -1) {
 			p11_message_err (errno, _("could not create a new session"));
-			return 1;
+			return 4;
 		}
 	}
 
@@ -522,7 +522,7 @@ server_loop (Server *server,
 	ret = sd_listen_fds (0);
 	if (ret > 1) {
 		p11_message (_("too many file descriptors received"));
-		return 1;
+		return 5;
 	} else if (ret == 1) {
 		server->socket = SD_LISTEN_FDS_START + 0;
 	} else
@@ -535,7 +535,7 @@ server_loop (Server *server,
 #endif
 	}
 	if (server->socket == -1)
-		return 1;
+		return 6;
 
 	sigprocmask (SIG_BLOCK, &blockset, NULL);
 
@@ -543,7 +543,7 @@ server_loop (Server *server,
 	 * print the envvars */
 	if (foreground) {
 		if (!print_environment (getpid (), server, csh_opt))
-			return 1;
+			return 7;
 		fflush (stdout);
 	}
 
@@ -639,7 +639,7 @@ server_loop (Server *server,
 
 	remove (server->socket_name);
 
-	return ret;
+	return 15;
 }
 
 int
@@ -731,7 +731,7 @@ main (int argc,
 			grp = getgrnam (optarg);
 			if (grp == NULL) {
 				p11_message (_("unknown group: %s"), optarg);
-				return 2;
+				return 8;
 			}
 			gid = grp->gr_gid;
 			break;
@@ -739,7 +739,7 @@ main (int argc,
 			pwd = getpwnam (optarg);
 			if (pwd == NULL) {
 				p11_message (_("unknown user: %s"), optarg);
-				return 2;
+				return 9;
 			}
 			uid = pwd->pw_uid;
 			break;
@@ -747,7 +747,7 @@ main (int argc,
 			grp = getgrnam (optarg);
 			if (grp == NULL) {
 				p11_message (_("unknown group: %s"), optarg);
-				return 2;
+				return 10;
 			}
 			run_as_gid = grp->gr_gid;
 			break;
@@ -755,7 +755,7 @@ main (int argc,
 			pwd = getpwnam (optarg);
 			if (pwd == NULL) {
 				p11_message (_("unknown user: %s"), optarg);
-				return 2;
+				return 11;
 			}
 			run_as_uid = pwd->pw_uid;
 			break;
@@ -789,7 +789,7 @@ main (int argc,
 
 	if (argc < 1 && !kill_opt) {
 		p11_tool_usage (usages, options);
-		return 2;
+		return 12;
 	}
 
 	if (!opt_sh && !opt_csh) {
@@ -808,17 +808,17 @@ main (int argc,
 		if (pidstr == NULL) {
 			fprintf (stderr, "%s not set, cannot kill server",
 				 P11_KIT_SERVER_PID_ENV);
-			exit (1);
+			exit (13);
 		}
 		pidval = strtol (pidstr, &endptr, 10);
 		if (errno == ERANGE &&
 		    (pidval == LONG_MAX || pidval == LONG_MIN)) {
 			perror ("strtol");
-			exit (1);
+			exit (14);
 		}
 		if (kill ((pid_t) pidval, SIGTERM) == -1) {
 			perror ("kill");
-			exit (1);
+			exit (16);
 		}
 
 		if (csh_opt) {
@@ -838,13 +838,13 @@ main (int argc,
 	if (run_as_gid != -1) {
 		if (setgid (run_as_gid) == -1) {
 			p11_message_err (errno, _("cannot set gid to %u"), (unsigned)run_as_gid);
-			ret = 1;
+			ret = 17;
 			goto out;
 		}
 
 		if (setgroups (1, &run_as_gid) == -1) {
 			p11_message_err (errno, _("cannot setgroups to %u"), (unsigned)run_as_gid);
-			ret = 1;
+			ret = 18;
 			goto out;
 		}
 	}
@@ -852,7 +852,7 @@ main (int argc,
 	if (run_as_uid != -1) {
 		if (setuid (run_as_uid) == -1) {
 			p11_message_err (errno, _("cannot set uid to %u"), (unsigned)run_as_uid);
-			ret = 1;
+			ret = 19;
 			goto out;
 		}
 	}
@@ -861,26 +861,26 @@ main (int argc,
 		const char *runtime_dir;
 
 		if (asprintf (&name, "pkcs11-%d", getpid ()) < 0) {
-			ret = 1;
+			ret = 20;
 			goto out;
 		}
 
 		runtime_dir = secure_getenv ("XDG_RUNTIME_DIR");
 		if (!runtime_dir || !runtime_dir[0]) {
 			p11_message_err (errno, _("cannot determine runtime directory"));
-			ret = 1;
+			ret = 21;
 			goto out;
 		}
 
 		socket_base = p11_path_build (runtime_dir, "p11-kit", NULL);
 		if (socket_base == NULL) {
-			ret = 1;
+			ret = 22;
 			goto out;
 		}
 
 		if (mkdir (socket_base, 0700) == -1 && errno != EEXIST) {
 			p11_message_err (errno, _("cannot create %s"), socket_base);
-			ret = 1;
+			ret = 23;
 			goto out;
 		}
 
@@ -892,7 +892,7 @@ main (int argc,
 
 	server = server_new ((const char **)argv, argc, provider, socket_name);
 	if (server == NULL) {
-		ret = 1;
+		ret = 24;
 		goto out;
 	}
 
@@ -1151,7 +1151,7 @@ main (int argc,
 
 	if (!load_windows_functions ()) {
 		p11_message (_("couldn't initialize Windows security functions"));
-		return 1;
+		return 25;
 	}
 
 	while ((opt = p11_tool_getopt (argc, argv, options)) != -1) {
@@ -1183,13 +1183,13 @@ main (int argc,
 
 	if (argc < 1) {
 		p11_tool_usage (usages, options);
-		return 2;
+		return 26;
 	}
 
 	if (name == NULL) {
 		if (asprintf (&pipe_name, "%spkcs11-%d",
 			      pipe_base, _getpid ()) < 0) {
-			ret = 1;
+			ret = 27;
 			goto out;
 		}
 	} else {
@@ -1198,7 +1198,7 @@ main (int argc,
 
 	server = server_new ((const char **)argv, argc, provider, pipe_name);
 	if (server == NULL) {
-		ret = 1;
+		ret = 28;
 		goto out;
 	}
 
